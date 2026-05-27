@@ -34,6 +34,8 @@ This is an active learning project. Not all components listed in the roadmap are
 
 ## Current results
 
+![Top 20 drugs by death-associated reports, FAERS 2024 Q1](reports/figures/top20_drug_death_2024q1.png)
+
 For 2024 Q1, the joined analytical dataset contains:
 
 - 22,052,096 drug-reaction pair rows
