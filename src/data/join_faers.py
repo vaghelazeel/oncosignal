@@ -1,5 +1,10 @@
 import pandas as pd
+from pathlib import Path
 from src.data.load_faers import load_table
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+OUTPUT_DIR = PROJECT_ROOT / "data" / "processed"
 
 
 def drug_reaction_pairs(year, quarter):
@@ -7,7 +12,7 @@ def drug_reaction_pairs(year, quarter):
     Build a table of every drug-reaction pair from one FAERS quarter.
 
     Returns one row per (primaryid, drug, reaction) combination.
-    Warning: a patient on N drugs reporting M reactions produces N*M rows.
+    A patient on N drugs reporting M reactions produces N*M rows.
     To count unique patients, deduplicate on primaryid before counting.
     """
     drug = load_table(year, quarter, "DRUG")
@@ -85,10 +90,45 @@ def build_full_dataset(year, quarter):
     return pairs
 
 
+def save_full_dataset(year, quarter, overwrite=False):
+    """
+    Build the full analytical dataset and save it as a Parquet file.
+
+    The output file is named faers_full_YYYYqN.parquet and saved to
+    data/processed. Once saved, the dataset can be reloaded with
+    pd.read_parquet in a few seconds instead of rebuilding from scratch.
+    """
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    output_path = OUTPUT_DIR / f"faers_full_{year}q{quarter}.parquet"
+
+    if output_path.exists() and not overwrite:
+        size_mb = output_path.stat().st_size / 1e6
+        print(f"{output_path.name} already exists ({size_mb:.1f} MB), skipping")
+        return output_path
+
+    df = build_full_dataset(year, quarter)
+
+    print(f"Saving to {output_path.name}...")
+    df.to_parquet(output_path, engine="pyarrow", compression="snappy", index=False)
+
+    size_mb = output_path.stat().st_size / 1e6
+    print(f"Saved {output_path.name} ({size_mb:.1f} MB)")
+    return output_path
+
+
+def load_full_dataset(year, quarter):
+    """
+    Load a previously saved Parquet dataset for one quarter.
+    Much faster than rebuilding from raw ZIPs.
+    """
+    path = OUTPUT_DIR / f"faers_full_{year}q{quarter}.parquet"
+    if not path.exists():
+        raise FileNotFoundError(
+            f"No saved dataset for {year} Q{quarter}. "
+            f"Run save_full_dataset({year}, {quarter}) first."
+        )
+    return pd.read_parquet(path, engine="pyarrow")
+
+
 if __name__ == "__main__":
-    df = build_full_dataset(2024, 1)
-    print()
-    print(f"Final shape: {df.shape}")
-    print(f"Unique patients: {df['primaryid'].nunique():,}")
-    print(f"Unique drugs: {df['drugname'].nunique():,}")
-    print(f"Unique reactions: {df['reaction'].nunique():,}")
+    save_full_dataset(2024, 1)
