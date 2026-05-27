@@ -225,7 +225,8 @@ data/interim/*
 !data/interim/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
-reports/figures/*
+reports/figures/*.csv
+reports/figures/*.parquet
 !reports/figures/.gitkeep
 
 # Secrets
