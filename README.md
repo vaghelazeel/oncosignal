@@ -1,50 +1,58 @@
-# OncoSignal
+## Methodology
 
-A pharmacovigilance data engineering and signal detection project built on FDA FAERS (FDA Adverse Event Reporting System) data.
+**Data source:** FDA FAERS quarterly ASCII files, publicly available at fis.fda.gov.
 
-OncoSignal processes raw FAERS quarterly archives into a structured analytical dataset and runs pharmacovigilance analyses on top of it. The long-term aim is signal detection for adverse drug reactions, with a particular interest in oncology drugs.
+**Pipeline:**
+1. Download a FAERS quarter (currently 2024 Q1) and unzip into `data/raw/`.
+2. Parse DEMO, DRUG, REAC, OUTC files into pandas DataFrames.
+3. Join on `primaryid` to produce a case-level table.
+4. Aggregate to drug–event level using primary-suspect drug logic.
+5. For each drug–event pair, construct a 2x2 contingency table (cells `a`, `b`, `c`, `d`).
+6. Compute disproportionality statistics:
+   - **PRR** (Proportional Reporting Ratio)
+   - **ROR** (Reporting Odds Ratio)
+   - **Chi-square** for association strength
+7. Flag pairs as candidate signals where PRR is elevated and chi-square indicates association.
+8. Export results to `reports/` as CSV for downstream analysis and dashboarding.
 
-This is an active learning project. Not all components listed in the roadmap are complete. Status is documented honestly below.
+## Tech stack
 
-## Project status
+Python 3.12, pandas, numpy, scipy, pyarrow, tqdm, requests, matplotlib, Streamlit (for dashboard).
 
-**Phase A (Data engineering) — Complete**
+## Reproducing the analysis
 
-- Quarterly FAERS archive downloader from the FDA public export server
-- Loader for all 7 FAERS data tables (DEMO, DRUG, REAC, OUTC, INDI, THER, RPSR)
-- Relational join layer producing a single analytical dataset of drug-reaction pairs with patient demographics and outcome flags attached
-- Persistence layer using Apache Parquet with Snappy compression
+```powershell
+# Clone and set up environment
+git clone https://github.com/vaghelazeel/oncosignal.git
+cd oncosignal
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
 
-**Phase B (Descriptive analysis) — In progress**
+# Download FAERS 2024 Q1 (one-off)
+python src/data/download_faers.py
 
-- Drug-death association ranking, filtered to primary suspect drugs (complete for 2024 Q1)
-- Multi-quarter aggregation (pending)
+# Run the analysis pipeline
+python src/data/load_faers.py
+python src/data/join_faers.py
+python src/data/oncology_filter.py
+python src/analysis/disproportionality.py
+python src/analysis/drug_death_association.py
+python src/analysis/plot_drug_death.py
+```
 
-**Phase C (Signal detection) — Planned**
+Outputs land in `reports/`.
 
-- Disproportionality measures: Proportional Reporting Ratio (PRR) and Reporting Odds Ratio (ROR)
-- Drug name normalisation to consolidate brand and generic name variants
-- Visualisation layer for signal trends over time
+## Important caveats
 
-**Phase D (Advanced methods) — Planned, not started**
+- **Disproportionality is hypothesis-generating, not causal.** A statistically disproportionate signal indicates a drug–event pair that is reported more often together than expected under independence; it does not establish that the drug caused the event.
+- **FAERS is a spontaneous reporting database.** It contains under-reporting, reporting bias, and duplicate cases. Results should be interpreted alongside clinical context and regulatory safety communications.
+- **Rare events produce extreme statistics.** Pairs with very small denominators can show PRR values in the hundreds of thousands; these are statistical artefacts and require minimum-case thresholds in any clinical interpretation.
 
-- Bayesian Information Component (IC) for signal detection
-- Reaction term clustering (BERTopic or similar)
-- Supervised classifiers for signal prioritisation
+## Roadmap
 
-## Current results
+The original project charter (`docs/project_charter.md`) describes a six-phase ML/NLP extension covering supervised classification of report seriousness, unsupervised clustering of adverse-event profiles, narrative text mining with BERTopic, SHAP interpretation, and comparison against FDA safety-label updates. Phases D, E, and F are planned but not implemented in the current release.
 
-![Top 20 drugs by death-associated reports, FAERS 2024 Q1](reports/figures/top20_drug_death_2024q1.png)
+## License
 
-For 2024 Q1, the joined analytical dataset contains:
-
-- 22,052,096 drug-reaction pair rows
-- 406,184 unique patients
-- 26,850 unique drug name strings (pre-normalisation)
-- 12,361 unique reaction terms (MedDRA preferred terms)
-
-The first descriptive analysis ranked the top 20 primary-suspect drugs by death-associated reports. The output is dominated by oncology drugs and end-of-life medications, which illustrates the core limitation of raw frequency analysis in pharmacovigilance: confounding by indication. Drugs given to seriously ill patients appear at the top of death rankings regardless of actual safety profile. This motivates the Phase C work on disproportionality measures.
-
-Output file: `reports/drug_death_top_primary_suspect_2024q1.csv`
-
-## Repository structure
+MIT — see LICENSE file.
