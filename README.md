@@ -67,8 +67,31 @@ recovers known regulatory safety signals.
 
 ---
 
-## Repository structure---
+## Repository structure
 
+oncosignal/
+├── app.py                         Streamlit dashboard entry point
+├── data/
+│   ├── raw/                       FAERS quarterly ZIP files (not tracked in git)
+│   ├── interim/                   Parsed intermediate parquet files
+│   └── processed/                 Cleaned analysis-ready datasets
+├── src/
+│   ├── data/
+│   │   ├── download_faers.py      FAERS downloader
+│   │   ├── load_faers.py          Parser for DEMO, DRUG, REAC, OUTC files
+│   │   ├── join_faers.py          Case-level table joins
+│   │   └── oncology_filter.py     Oncology drug subset filter
+│   └── analysis/
+│       ├── disproportionality.py        PRR, ROR, chi-square calculations
+│       ├── drug_death_association.py    Fatal-outcome analysis
+│       └── plot_drug_death.py           Top-20 visualisation
+├── reports/
+├── tests/
+├── docs/
+│   └── project_charter.md
+├── requirements.txt
+├── requirements-research.txt
+└── README.md
 ## Methodology
 
 **Data source:** FDA FAERS quarterly ASCII files, publicly available at fis.fda.gov.
