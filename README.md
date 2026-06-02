@@ -69,6 +69,7 @@ recovers known regulatory safety signals.
 
 ## Repository structure
 
+```
 oncosignal/
 ├── app.py                         Streamlit dashboard entry point
 ├── data/
@@ -92,6 +93,7 @@ oncosignal/
 ├── requirements.txt
 ├── requirements-research.txt
 └── README.md
+```
 ## Methodology
 
 **Data source:** FDA FAERS quarterly ASCII files, publicly available at fis.fda.gov.
